@@ -10,12 +10,12 @@ methods that the API provides.
 ``greatape`` is pretty darned easy to use.  Simple import the API object and 
 instantiate it with your API key.
 
-::
+
 
 >>> from greatape import MailChimp
 >>> mailchimp = MailChimp('<your api key>')
 >>> mailchimp.ping()
-u"Everything's Chimpy!"
+u\"Everything's Chimpy!\"
 >>> mailchimp.lists()
 >>> mailchimp.listActivity({'id':'<LIST_ID>'})
 
@@ -25,8 +25,6 @@ Results will be returned as Python lists or dictionaries.  (Note that you do
 not need to provide your API key as a parameter other than to the constructor.)
 Refer to the `MailChimp API documentation <http://www.mailchimp.com/api/1.2/>`_
 for a complete list of available methods.
-
-::
 
 >>> from greatape import MailChimpSTS
 >>> mc_sts = MailChimpSTS('<your api key>')
