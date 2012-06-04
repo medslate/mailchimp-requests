@@ -1,10 +1,9 @@
-from urllib import urlencode, quote_plus
-from datetime import datetime, date
+import datetime
 import urllib2
+from urllib import quote_plus
 
 try:
-    import functools
-    partial = functools.partial
+    from functools import partial
 except ImportError:
     def partial(func, *args, **keywords):
         def newfunc(*fargs, **fkeywords):
@@ -103,7 +102,7 @@ class MailChimp(object):
             if type(value) in (list, dict):
                 pairs.append(self._serialize(value, name))
             elif value is not None:
-                if type(value) in (bool, datetime, date, int):
+                if type(value) in (bool, datetime.datetime, datetime.date, int):
                     value = str(value).lower()
                 pairs.append('%s=%s' % (name, quote_plus(value)))
         return '&'.join(pairs)
