@@ -37,7 +37,7 @@ DEFAULT_TIMEOUT = 30
 
 
 class MailChimp(object):
-    base_url = "%s://%s.api.mailchimp.com/1.3/?method=%s"
+    base_url = "%(protocol)s://%(data_center)s.api.mailchimp.com/1.3/?method=%(method)s"
 
     def __init__(self, api_key, ssl=True, timeout=DEFAULT_TIMEOUT, **kwargs):
         self.data_center = api_key.rsplit("-", 1)[-1]
@@ -56,24 +56,27 @@ class MailChimp(object):
         chimp.prefix = "list"
         return chimp
 
-    def __call__(self, params_dict=None, **kwargs):
-        method = self.prefix + kwargs.pop("method")
+    def build_method_url(self, method):
+        if self.ssl:
+            protocol = "https"
+        else:
+            protocol = "http"
+        return self.base_url % {
+            "protocol": protocol,
+            "data_center": self.data_center,
+            "method": method
+        }
 
+    def serialize_params(self, params_dict):
         if params_dict is None:
             params_dict = {}
         params_dict.update({
             "apikey": self.api_key,
         })
+        return self._serialize(params_dict)
 
-        data = self._serialize(params_dict)
-        if self.ssl:
-            protocol = "https"
-        else:
-            protocol = "http"
-
-        url = self.base_url % (protocol, self.data_center, method)
-
-        logger.debug(u"Calling \"%s\" API method using url: %s", method, url)
+    def call_api(self, url, data):
+        logger.debug(u"Calling API using url: %s", url)
         logger.debug(u"Serialized POST data is: %s", data)
 
         try:
@@ -83,19 +86,16 @@ class MailChimp(object):
                 response.status_code, response.content
             )
             response.raise_for_status()
-
         except (requests.Timeout, requests.ConnectionError), e:
             logger.error("Connecting to %s failed: %s.", url, e)
             raise MailChimpConnectionError(
                 "Connecting to %s failed: %s." % (url, e)
             )
-
         except requests.HTTPError, e:
             logger.exception(
                 "HTTP error while accessing MailChimp API %s: %s.",
                 url, e.response.status_code
             )
-
             if e.response.status_code == 304: # TODO: why this special case?
                 return []
             else:
@@ -105,7 +105,6 @@ class MailChimp(object):
                 mailchimp_error = MailChimpServiceError(message)
                 mailchimp_error.exception = e
                 raise mailchimp_error
-
         except requests.RequestException, e:
             logger.exception(
                 "Error while accessing MailChimp API %s: %s.", url, e
@@ -119,6 +118,12 @@ class MailChimp(object):
                 raise MailChimpAPIError(data["error"])
 
         return data
+
+    def __call__(self, params_dict=None, **kwargs):
+        method = self.prefix + kwargs.pop("method")
+        url = self.build_method_url(method)
+        data = self.serialize_params(params_dict)
+        return self.call_api(url, data)
 
     def _serialize(self, params, key=None):
         """Replicates PHP's (incorrect) serialization to query parameters to
