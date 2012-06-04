@@ -1,6 +1,7 @@
 #-*- coding: utf-8 -*-
 
 import datetime
+import logging
 import urllib2
 from urllib import quote_plus
 
@@ -25,6 +26,8 @@ except ImportError:
     except ImportError:
         raise ImportError('Ape requires either Python >2.6 or simplejson')
 
+logger = logging.getLogger('greatape')
+
 
 class MailChimpError(Exception):
     pass
@@ -33,11 +36,10 @@ class MailChimpError(Exception):
 class MailChimp(object):
     base_url = "%s://%s.api.mailchimp.com/1.3/?method=%s"
 
-    def __init__(self, api_key, ssl=True, debug=False, **kwargs):
+    def __init__(self, api_key, ssl=True, **kwargs):
         self.data_center = api_key.rsplit('-', 1)[-1]
         self.api_key = api_key
         self.ssl = ssl
-        self.debug = debug
         self.defaults = kwargs or {}
         self.prefix = ''
 
@@ -45,7 +47,7 @@ class MailChimp(object):
         return partial(self, method=name, *args, **keywords)
 
     def list(self, id):
-        chimp = MailChimp(self.api_key, self.ssl, self.debug, **self.defaults)
+        chimp = MailChimp(self.api_key, self.ssl, **self.defaults)
         chimp.defaults['id'] = id
         chimp.prefix = 'list'
         return chimp
@@ -67,24 +69,26 @@ class MailChimp(object):
 
         url = self.base_url % (protocol, self.data_center, method)
 
-        if self.debug:
-            print 'URL:', url
-            print 'POST data:', params
+        logger.debug(u'Calling "%s" API method using url: %s', method, url)
+        logger.debug(u'Serialized POST data is: %s', params)
+
         req = urllib2.Request(url, params)
         try:
             handle = urllib2.urlopen(req)
             res = handle.read()
-            if self.debug:
-                print 'Response : ', res
+            logger.debug(u'Response: %s', res)
+
             response = json.loads(res)
             try:
                 if 'error' in response:
+                    logger.error('MailChimp API error: %s.', response['error'])
                     raise MailChimpError(response['error'])
             except TypeError: # the response was boolean
                 pass
 
             return response
         except urllib2.HTTPError, e:
+            logger.exception('HTTP error while accessing MailChimp API')
             if e.code == 304:
                 return []
             else:
