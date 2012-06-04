@@ -33,14 +33,17 @@ from greatape.exceptions import MailChimpError, MailChimpConnectionError, \
 
 logger = logging.getLogger("greatape")
 
+DEFAULT_TIMEOUT = 30
+
 
 class MailChimp(object):
     base_url = "%s://%s.api.mailchimp.com/1.3/?method=%s"
 
-    def __init__(self, api_key, ssl=True, **kwargs):
+    def __init__(self, api_key, ssl=True, timeout=DEFAULT_TIMEOUT, **kwargs):
         self.data_center = api_key.rsplit("-", 1)[-1]
         self.api_key = api_key
         self.ssl = ssl
+        self.timeout = timeout
         self.defaults = kwargs or {}
         self.prefix = ""
 
@@ -74,7 +77,7 @@ class MailChimp(object):
         logger.debug(u"Serialized POST data is: %s", data)
 
         try:
-            response = requests.post(url, data=data)
+            response = requests.post(url, data=data, timeout=self.timeout)
             logger.debug(
                 u"Response (%s): %s",
                 response.status_code, response.content
