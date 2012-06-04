@@ -101,10 +101,10 @@ class MailChimp(object):
             name = quote_plus(name)
             if key is not None:
                 name = '%s[%s]' % (key, name)
-            if type(value) in (list, dict):
+            if isinstance(value, (list, dict)):
                 pairs.append(self._serialize(value, name))
             elif value is not None:
-                if type(value) in (bool, datetime.datetime, datetime.date, int):
+                if isinstance(value, (bool, datetime.datetime, datetime.date, int)):
                     value = str(value).lower()
                 pairs.append('%s=%s' % (name, quote_plus(value)))
         return '&'.join(pairs)
