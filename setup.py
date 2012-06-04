@@ -10,4 +10,5 @@ setup(
     packages = find_packages("src"),
     package_dir = {"": "src"},
     install_requires = ["setuptools"],
+    requires = ["requests"],
 )

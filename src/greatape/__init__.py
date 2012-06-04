@@ -2,7 +2,6 @@
 
 import datetime
 import logging
-import urllib2
 from urllib import quote_plus
 
 try:
@@ -26,11 +25,13 @@ except ImportError:
     except ImportError:
         raise ImportError("Ape requires either Python >2.6 or simplejson")
 
+import requests
+
+from greatape.exceptions import MailChimpError, MailChimpConnectionError, \
+    MailChimpServiceError, MailChimpAPIError
+
+
 logger = logging.getLogger("greatape")
-
-
-class MailChimpError(Exception):
-    pass
 
 
 class MailChimp(object):
@@ -61,7 +62,7 @@ class MailChimp(object):
             "apikey": self.api_key,
         })
 
-        params = self._serialize(params_dict)
+        data = self._serialize(params_dict)
         if self.ssl:
             protocol = "https"
         else:
@@ -70,29 +71,51 @@ class MailChimp(object):
         url = self.base_url % (protocol, self.data_center, method)
 
         logger.debug(u"Calling \"%s\" API method using url: %s", method, url)
-        logger.debug(u"Serialized POST data is: %s", params)
+        logger.debug(u"Serialized POST data is: %s", data)
 
-        req = urllib2.Request(url, params)
         try:
-            handle = urllib2.urlopen(req)
-            res = handle.read()
-            logger.debug(u"Response: %s", res)
+            response = requests.post(url, data=data)
+            logger.debug(
+                u"Response (%s): %s",
+                response.status_code, response.content
+            )
+            response.raise_for_status()
 
-            response = json.loads(res)
-            try:
-                if "error" in response:
-                    logger.error("MailChimp API error: %s.", response["error"])
-                    raise MailChimpError(response["error"])
-            except TypeError: # the response was boolean
-                pass
+        except (requests.Timeout, requests.ConnectionError), e:
+            logger.error("Connecting to %s failed: %s.", url, e)
+            raise MailChimpConnectionError(
+                "Connecting to %s failed: %s." % (url, e)
+            )
 
-            return response
-        except urllib2.HTTPError, e:
-            logger.exception("HTTP error while accessing MailChimp API")
-            if e.code == 304:
+        except requests.HTTPError, e:
+            logger.exception(
+                "HTTP error while accessing MailChimp API %s: %s.",
+                url, e.response.status_code
+            )
+
+            if e.response.status_code == 304: # TODO: why this special case?
                 return []
             else:
-                raise MailChimpError()
+                message = "HTTP error while accessing MailChimp API %s: %s." % (
+                    url, e.response.status_code
+                )
+                mailchimp_error = MailChimpServiceError(message)
+                mailchimp_error.exception = e
+                raise mailchimp_error
+
+        except requests.RequestException, e:
+            logger.exception(
+                "Error while accessing MailChimp API %s: %s.", url, e
+            )
+            raise MailChimpError(str(e))
+
+        data = json.loads(response.text)
+        if not isinstance(data, bool):
+            if "error" in data:
+                logger.error("MailChimp API error: %s.", data["error"])
+                raise MailChimpAPIError(data["error"])
+
+        return data
 
     def _serialize(self, params, key=None):
         """Replicates PHP's (incorrect) serialization to query parameters to
@@ -121,4 +144,4 @@ class MailChimp(object):
 class MailChimpSTS(MailChimp):
     base_url = "%s://%s.sts.mailchimp.com/1.0/%s.json/"
 
-__all__ = ["MailChimp", "MailChimpError", "MailChimpSTS"]
+__all__ = ["MailChimp", "MailChimpError", "MailChimpAPIError", "MailChimpSTS"]
