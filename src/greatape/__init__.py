@@ -24,9 +24,9 @@ except ImportError:
     try:
         import simplejson as json
     except ImportError:
-        raise ImportError('Ape requires either Python >2.6 or simplejson')
+        raise ImportError("Ape requires either Python >2.6 or simplejson")
 
-logger = logging.getLogger('greatape')
+logger = logging.getLogger("greatape")
 
 
 class MailChimpError(Exception):
@@ -37,58 +37,58 @@ class MailChimp(object):
     base_url = "%s://%s.api.mailchimp.com/1.3/?method=%s"
 
     def __init__(self, api_key, ssl=True, **kwargs):
-        self.data_center = api_key.rsplit('-', 1)[-1]
+        self.data_center = api_key.rsplit("-", 1)[-1]
         self.api_key = api_key
         self.ssl = ssl
         self.defaults = kwargs or {}
-        self.prefix = ''
+        self.prefix = ""
 
     def __getattr__(self, name, *args, **keywords):
         return partial(self, method=name, *args, **keywords)
 
     def list(self, id):
         chimp = MailChimp(self.api_key, self.ssl, **self.defaults)
-        chimp.defaults['id'] = id
-        chimp.prefix = 'list'
+        chimp.defaults["id"] = id
+        chimp.prefix = "list"
         return chimp
 
     def __call__(self, params_dict=None, **kwargs):
-        method = self.prefix + kwargs.pop('method')
+        method = self.prefix + kwargs.pop("method")
 
         if params_dict is None:
             params_dict = {}
         params_dict.update({
-            'apikey': self.api_key,
+            "apikey": self.api_key,
         })
 
         params = self._serialize(params_dict)
         if self.ssl:
-            protocol = 'https'
+            protocol = "https"
         else:
-            protocol = 'http'
+            protocol = "http"
 
         url = self.base_url % (protocol, self.data_center, method)
 
-        logger.debug(u'Calling "%s" API method using url: %s', method, url)
-        logger.debug(u'Serialized POST data is: %s', params)
+        logger.debug(u"Calling \"%s\" API method using url: %s", method, url)
+        logger.debug(u"Serialized POST data is: %s", params)
 
         req = urllib2.Request(url, params)
         try:
             handle = urllib2.urlopen(req)
             res = handle.read()
-            logger.debug(u'Response: %s', res)
+            logger.debug(u"Response: %s", res)
 
             response = json.loads(res)
             try:
-                if 'error' in response:
-                    logger.error('MailChimp API error: %s.', response['error'])
-                    raise MailChimpError(response['error'])
+                if "error" in response:
+                    logger.error("MailChimp API error: %s.", response["error"])
+                    raise MailChimpError(response["error"])
             except TypeError: # the response was boolean
                 pass
 
             return response
         except urllib2.HTTPError, e:
-            logger.exception('HTTP error while accessing MailChimp API')
+            logger.exception("HTTP error while accessing MailChimp API")
             if e.code == 304:
                 return []
             else:
@@ -106,16 +106,16 @@ class MailChimp(object):
         for name, value in items:
             name = quote_plus(name)
             if key is not None:
-                name = '%s[%s]' % (key, name)
+                name = "%s[%s]" % (key, name)
             if isinstance(value, (list, dict)):
                 pairs.append(self._serialize(value, name))
             elif value is not None:
                 if isinstance(value, (bool, datetime.datetime, datetime.date, int)):
                     value = str(value).lower()
                 elif isinstance(value, unicode):
-                    value = value.encode('utf-8')
-                pairs.append('%s=%s' % (name, quote_plus(value)))
-        return '&'.join(pairs)
+                    value = value.encode("utf-8")
+                pairs.append("%s=%s" % (name, quote_plus(value)))
+        return "&".join(pairs)
 
 
 class MailChimpSTS(MailChimp):
