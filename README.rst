@@ -43,9 +43,9 @@ for a complete list of available methods.
         }
 >>> mc_sts.SendEmail(params)
 
-``greatape`` defaults to using SSL to access the MailChimp API.  If this isn't
-what you want, pass ``ssl=False`` to the ``MailChimp`` constructor.
+``greatape`` defaults to using SSL and keep-alive to access the MailChimp API.
+If this isn't what you want, pass ``ssl=False`` or ``keep_alive=False``
+to the ``MailChimp`` constructor.
 
-In case you desperately want to know exactly what resource you are hitting with
-what data, pass the constructor ``debug=True`` and you will get a print out of
-the URL and POST data just before the call is made.
+Logging uses the Python's ``logging`` module. Configure the ``greatape`` logger
+and set it to DEBUG level to get info about all API calls and exchanged data.
