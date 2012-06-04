@@ -1,3 +1,5 @@
+#-*- coding: utf-8 -*-
+
 import datetime
 import urllib2
 from urllib import quote_plus
