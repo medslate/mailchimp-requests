@@ -2,6 +2,7 @@
 
 import datetime
 import logging
+import threading
 from urllib import quote_plus
 
 try:
@@ -47,6 +48,7 @@ class MailChimp(object):
         self.timeout = timeout
         self.defaults = kwargs or {}
         self.prefix = ""
+        self._thread = threading.local()
 
     def __getattr__(self, name, *args, **keywords):
         return partial(self, method=name, *args, **keywords)
@@ -79,9 +81,15 @@ class MailChimp(object):
     def get_http_session(self):
         if not self.keep_alive:
             return requests
-        if not hasattr(self, "_session"):
-            self._session = requests.session()
-        return self._session
+
+        if hasattr(self._thread, "session"):
+            if self._thread.use_count < 100:
+                self._thread.use_count += 1
+                return self._thread.session
+
+        self._thread.session = requests.session()
+        self._thread.use_count = 1
+        return self._thread.session
 
     def call_api(self, url, data):
         logger.debug(u"Calling API using url: %s", url)
