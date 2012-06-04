@@ -17,7 +17,6 @@ except ImportError:
         newfunc.keywords = keywords
         return newfunc
 
-
 try:
     import json
 except ImportError:
@@ -33,7 +32,7 @@ class MailChimpError(Exception):
 
 class MailChimp(object):
     base_url = "%s://%s.api.mailchimp.com/1.3/?method=%s"
-    
+
     def __init__(self, api_key, ssl=True, debug=False, **kwargs):
         self.data_center = api_key.rsplit('-', 1)[-1]
         self.api_key = api_key
@@ -65,9 +64,9 @@ class MailChimp(object):
             protocol = 'https'
         else:
             protocol = 'http'
-        
-        url = self.base_url % ( protocol, self.data_center, method )
-        
+
+        url = self.base_url % (protocol, self.data_center, method)
+
         if self.debug:
             print 'URL:', url
             print 'POST data:', params
@@ -83,13 +82,13 @@ class MailChimp(object):
                     raise MailChimpError(response['error'])
             except TypeError: # the response was boolean
                 pass
-            
+
             return response
         except urllib2.HTTPError, e:
-            if (e.code == 304):
+            if e.code == 304:
                 return []
             else:
-                raise MailChimpError
+                raise MailChimpError()
 
     def _serialize(self, params, key=None):
         """Replicates PHP's (incorrect) serialization to query parameters to
@@ -111,6 +110,7 @@ class MailChimp(object):
                     value = str(value).lower()
                 pairs.append('%s=%s' % (name, quote_plus(value)))
         return '&'.join(pairs)
+
 
 class MailChimpSTS(MailChimp):
     base_url = "%s://%s.sts.mailchimp.com/1.0/%s.json/"
