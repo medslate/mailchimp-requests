@@ -39,10 +39,11 @@ DEFAULT_TIMEOUT = 30
 class MailChimp(object):
     base_url = "%(protocol)s://%(data_center)s.api.mailchimp.com/1.3/?method=%(method)s"
 
-    def __init__(self, api_key, ssl=True, timeout=DEFAULT_TIMEOUT, **kwargs):
+    def __init__(self, api_key, ssl=True, keep_alive=True, timeout=DEFAULT_TIMEOUT, **kwargs):
         self.data_center = api_key.rsplit("-", 1)[-1]
         self.api_key = api_key
         self.ssl = ssl
+        self.keep_alive = keep_alive
         self.timeout = timeout
         self.defaults = kwargs or {}
         self.prefix = ""
@@ -75,12 +76,19 @@ class MailChimp(object):
         })
         return self._serialize(params_dict)
 
+    def get_http_session(self):
+        if not self.keep_alive:
+            return requests
+        if not hasattr(self, "_session"):
+            self._session = requests.session()
+        return self._session
+
     def call_api(self, url, data):
         logger.debug(u"Calling API using url: %s", url)
         logger.debug(u"Serialized POST data is: %s", data)
 
         try:
-            response = requests.post(url, data=data, timeout=self.timeout)
+            response = self.get_http_session().post(url, data=data, timeout=self.timeout)
             logger.debug(
                 u"Response (%s): %s",
                 response.status_code, response.content
