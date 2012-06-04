@@ -51,8 +51,11 @@ class MailChimp(object):
         chimp.prefix = 'list'
         return chimp
 
-    def __call__(self, params_dict={}, **kwargs):
+    def __call__(self, params_dict=None, **kwargs):
         method = self.prefix + kwargs.pop('method')
+
+        if params_dict is None:
+            params_dict = {}
         params_dict.update({
             'apikey': self.api_key,
         })
